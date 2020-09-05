@@ -25,7 +25,7 @@ But the requirement is one load balancer all services running in cluster. In the
 To create alb ingress in aws eks fargate use the below aws doc,
 https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html
 
-Now we need to create second ingress controller, nginx
+creating second ingress controller - nginx
 Before that, understand currently the eks fargate will not support nginx official helm chart. so we need to do small tweak on the helm values.
 
 - Port type should be NodePort
@@ -41,7 +41,7 @@ Use the below helm command to deploy nginx controller in your cluster.
 helm install nginx-ingress hkube/nginx-ingress --version 1.31.1001 --set-string controller.service.externalTrafficPolicy=Local --set-string controller.service.type=NodePort --set controller.publishService.enabled=true --set serviceAccount.create=true --set rbac.create=true --set-string controller.config.server-tokens=false --set-string controller.config.use-proxy-protocol=false --set-string controller.config.compute-full-forwarded-for=true --set-string controller.config.use-forwarded-headers=true --set controller.metrics.enabled=true --set controller.autoscaling.maxReplicas=1 --set controller.autoscaling.minReplicas=1 --set controller.autoscaling.enabled=true --namespace kube-system -f nginx-values.yaml 
 ```
 
-Use below value file also helm deployment
+Use below value file for helm deployment
 > nginx-values.yaml 
 
 ```
@@ -63,7 +63,7 @@ controller:
     allowPrivilegeEscalation: false
 ```
 
-Connect the ALB to the Nginx Ingress controller
+### Connect the ALB to the Nginx Ingress controller
 
 To connect the ALB to the nginx ingress controller, we need to create a kubernetes ingress resource in the namespace kube-system with the following configuration:
 
@@ -94,7 +94,7 @@ spec:
 
 Now we are ready with alb it will communicate to the nginx ingress controller.
 
-Validate the chnages by getting ingress address, you will get the public facing dns address to access the services running in cluster.
+Validate the changes by accessing the ingress address, it will be the public facing dns address and we can access the services running in cluster this dns.
 > kubectl get ingress -n kube-system
 
 
