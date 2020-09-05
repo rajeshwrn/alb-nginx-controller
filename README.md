@@ -1,4 +1,4 @@
-# Single ALB solution in EKS fargate for multiple ingress
+# Solution for Single ALB in AWS EKS fargate for multiple ingress
 
 Documentation/Steps to enable single alb solution in EKS fargate for multiple ingress/service running different namespace. Now we have option to reuse an existing ALB instead of creating a new ALB per Ingress.
 
