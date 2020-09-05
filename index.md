@@ -40,6 +40,10 @@ Before that, understand currently the eks fargate will not support nginx officia
 Use the below helm command to deploy nginx controller in your cluster.
 
 ```
+helm repo add hkube https://hkube.io/helm
+```
+
+```
 helm install nginx-ingress hkube/nginx-ingress --version 1.31.1001 --set-string controller.service.externalTrafficPolicy=Local --set-string controller.service.type=NodePort --set controller.publishService.enabled=true --set serviceAccount.create=true --set rbac.create=true --set-string controller.config.server-tokens=false --set-string controller.config.use-proxy-protocol=false --set-string controller.config.compute-full-forwarded-for=true --set-string controller.config.use-forwarded-headers=true --set controller.metrics.enabled=true --set controller.autoscaling.maxReplicas=1 --set controller.autoscaling.minReplicas=1 --set controller.autoscaling.enabled=true --namespace kube-system -f nginx-values.yaml 
 ```
 
