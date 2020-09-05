@@ -22,7 +22,7 @@ An Application Load Balancer or ALB is a bridge between inbound traffic and seve
  
 But the requirement is one load balancer all services running in cluster. In the case in which we have both: it is important to know the nginx ingress controller will manage all ingresses resources of your applications in your EKS cluster and the ALB ingress controller will manage the life cycle of the Application Load Balancer instance.
 
-![alt text](https://github.com/rajeshwrn/alb-nginx-controller/blob/master/alb-architecture.webp?raw=true "alb-architecture")
+![alt text](https://github.com/rajeshwrn/alb-nginx-controller/blob/master/alb-nginx%20ingress.pngp?raw=true "alb-architecture")
 
 To create alb ingress in aws eks fargate use the below aws doc,
 https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html
