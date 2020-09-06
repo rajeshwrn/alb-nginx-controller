@@ -1,6 +1,6 @@
 # Single ALB for multiple ingress in AWS EKS fargate 
 
-Documentation/Steps to enable an alb solution in EKS fargate for multiple ingress/service running different namespace.  Now we have option to reuse an existing ALB instead of creating a new ALB per Ingress.
+Documentation/Steps to create an alb in EKS fargate for multiple ingress/service running different namespace. Option to reuse an existing ALB instead of creating a new ALB per Ingress.
 
 ## Requirement 
 - Need to deploy multiple service in kubernetes with single alb. 
