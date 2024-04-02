@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <meta property="article:published_time" content="2020-12-04T10:00:00.000Z" />
+   </head>
+   <body>
+      <main>
+         <article>
+            <section>
+               <div class="pw-post-title">
+                  <h1 id="single-alb-for-multiple-ingress-in-aws-eks-fargate">Single ALB for multiple ingress in AWS EKS fargate</h1>
+               </div>
+               <p>Documentation/Steps to create an alb in EKS fargate for multiple ingress/service running different namespace. Option to reuse an existing ALB instead of creating a new ALB per Ingress.</p>
+               <h2 id="requirement">Requirement</h2>
+               <ul>
+                  <li>Need to deploy multiple service in kubernetes with single alb. </li>
+                  <li>Service/Ingress running on different fargate profile should communicate each other</li>
+               </ul>
+               <h3 id="what-is-an-application-load-balancer-">What is an Application Load Balancer?</h3>
+               <p>An Application Load Balancer or ALB is a bridge between inbound traffic and several targets (for example several pods for one application). The objective is to have applications with high availability.</p>
+               <h3 id="limitations">Limitations</h3>
+               <ul>
+                  <li>Each service/ingress running in kubernetes with different namespaces/ fargate profile will create new alb</li>
+                  <li>More cost and more public IP needed</li>
+               </ul>
+               <h3 id="solution">Solution</h3>
+               <p> We will now going to achieve this with 2 ingress controllers: the ALB ingress controller and the Nginx Ingress controller. </p>
+               <h4 id="why-do-we-have-to-use-2-ingress-controllers-">Why do we have to use 2 ingress controllers?</h4>
+               <p> Because if we use the nginx ingress controller, we can not connect it directly to an ALB and if we only use the ALB ingress controller, you will have an ALB instance for every ingress resource in the cluster. </p>
+               <p>But the requirement is one load balancer all services running in cluster. In the case in which we have both: it is important to know the nginx ingress controller will manage all ingresses resources of your applications in your EKS cluster and the ALB ingress controller will manage the life cycle of the Application Load Balancer instance.</p>
+               <p><img src="https://github.com/rajeshwrn/alb-nginx-controller/blob/master/alb-nginx_ingress.png?raw=true" alt="alt text" title="alb-architecture"></p>
+               <p>To create alb ingress in aws eks fargate use the below aws doc,
+                  <a href="https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html">https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html</a>
+               </p>
+               <p>creating second ingress controller - nginx
+                  Before that, understand currently the eks fargate will not support nginx official helm chart. so we need to do small tweak on the helm values.
+               </p>
+               <ul>
+                  <li>Port type should be NodePort</li>
+                  <li>allowPrivilegeEscalation should be false to enable the node creation in fargate profile</li>
+                  <li>Override defalut container ports 80 to 8080 and 443 to 8443</li>
+                  <li>Traffic policy should be local</li>
+               </ul>
+               <h3 id="installation">Installation</h3>
+               <p>Use the below helm command to deploy nginx controller in your cluster.</p>
+               <pre><code>helm repo <span class="hljs-keyword">add</span> ingress-nginx https:<span class="hljs-comment">//kubernetes.github.io/ingress-nginx</span>
+</code></pre>
+               <pre><code>helm install nginx-ingress ingress-nginx/ingress-nginx --set-string controller<span class="hljs-selector-class">.service</span><span class="hljs-selector-class">.externalTrafficPolicy</span>=Local --set-string controller<span class="hljs-selector-class">.service</span><span class="hljs-selector-class">.type</span>=NodePort --set controller<span class="hljs-selector-class">.publishService</span><span class="hljs-selector-class">.enabled</span>=true --set serviceAccount.create=true --set rbac.create=true --set-string controller<span class="hljs-selector-class">.config</span><span class="hljs-selector-class">.server-tokens</span>=false --set-string controller<span class="hljs-selector-class">.config</span><span class="hljs-selector-class">.use-proxy-protocol</span>=false --set-string controller<span class="hljs-selector-class">.config</span><span class="hljs-selector-class">.compute-full-forwarded-for</span>=true --set-string controller<span class="hljs-selector-class">.config</span><span class="hljs-selector-class">.use-forwarded-headers</span>=true --set controller<span class="hljs-selector-class">.metrics</span><span class="hljs-selector-class">.enabled</span>=true --set controller<span class="hljs-selector-class">.autoscaling</span><span class="hljs-selector-class">.maxReplicas</span>=<span class="hljs-number">1</span> --set controller<span class="hljs-selector-class">.autoscaling</span><span class="hljs-selector-class">.minReplicas</span>=<span class="hljs-number">1</span> --set controller<span class="hljs-selector-class">.autoscaling</span><span class="hljs-selector-class">.enabled</span>=true --namespace kube-system -f nginx-values.yaml
+</code></pre>
+               <p>For more customization on ingress-nginx helm chart 
+                  <a href="https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx">https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx</a>
+               </p>
+               <p>Use below value file for helm deployment</p>
+               <blockquote>
+                  <p>nginx-values.yaml </p>
+               </blockquote>
+               <pre><code><span class="hljs-attr">controller:</span> 
+<span class="hljs-attr">  extraArgs:</span> 
+<span class="hljs-attr">    http-port:</span> <span class="hljs-number">8080</span> 
+<span class="hljs-attr">    https-port:</span> <span class="hljs-number">8443</span> 
+<span class="hljs-attr">  containerPort:</span> 
+<span class="hljs-attr">    http:</span> <span class="hljs-number">8080</span> 
+<span class="hljs-attr">    https:</span> <span class="hljs-number">8443</span> 
+<span class="hljs-attr">  service:</span> 
+<span class="hljs-attr">    ports:</span> 
+<span class="hljs-attr">      http:</span> <span class="hljs-number">80</span> 
+<span class="hljs-attr">      https:</span> <span class="hljs-number">443</span> 
+<span class="hljs-attr">    targetPorts:</span> 
+<span class="hljs-attr">      http:</span> <span class="hljs-number">8080</span> 
+<span class="hljs-attr">      https:</span> <span class="hljs-number">8443</span> 
+<span class="hljs-attr">  image:</span> 
+<span class="hljs-attr">    allowPrivilegeEscalation:</span> <span class="hljs-literal">false</span>
+</code></pre>
+               <h3 id="connect-the-alb-to-the-nginx-ingress-controller">Connect the ALB to the Nginx Ingress controller</h3>
+               <p>To connect the ALB to the nginx ingress controller, we need to create a kubernetes ingress resource in the namespace kube-system with the following configuration:</p>
+               <blockquote>
+                  <p>kubectl apply -f alb-ingress-connect-nginx.yaml </p>
+               </blockquote>
+               <pre><code>apiVersion: extensions/v1beta1 
+kind: Ingress 
+metadata: 
+  annotations: 
+    <span class="hljs-selector-id">#alb</span><span class="hljs-selector-class">.ingress</span><span class="hljs-selector-class">.kubernetes</span><span class="hljs-selector-class">.io</span>/certificate-arn: &lt;CERTIFICATE_ARN&gt; 
+    alb<span class="hljs-selector-class">.ingress</span><span class="hljs-selector-class">.kubernetes</span><span class="hljs-selector-class">.io</span>/healthcheck-path: /healthz 
+    alb<span class="hljs-selector-class">.ingress</span><span class="hljs-selector-class">.kubernetes</span><span class="hljs-selector-class">.io</span>/scheme: internet-facing 
+    alb<span class="hljs-selector-class">.ingress</span><span class="hljs-selector-class">.kubernetes</span><span class="hljs-selector-class">.io</span>/target-type: ip 
+    alb<span class="hljs-selector-class">.ingress</span><span class="hljs-selector-class">.kubernetes</span><span class="hljs-selector-class">.io</span>/subnets: &lt;subnets&gt; 
+    kubernetes.io/ingress<span class="hljs-selector-class">.class</span>: alb  
+  name: alb-ingress-connect-nginx 
+  namespace: kube-system 
+spec: 
+  rules: 
+    - http: 
+        paths: 
+          - backend: 
+              serviceName: nginx-ingress-controller 
+              servicePort: <span class="hljs-number">8080</span> 
+            path: <span class="hljs-comment">/*</span>
+</code></pre>
+               <p>Now we are ready with alb it will communicate to the nginx ingress controller.</p>
+               <p>Validate the changes by accessing the ingress address, it will be the public facing dns address and we can access the services running in cluster this dns.</p>
+               <blockquote>
+                  <p>kubectl get ingress -n kube-system</p>
+               </blockquote>
+               <p>Deploy your application with following ingress annonation and service port should be &#39;ClusterIP&#39;</p>
+               <pre><code> <span class="hljs-attribute">annotations</span>:
+    kubernetes.io/ingress.<span class="hljs-attribute">class</span>: <span class="hljs-string">"nginx"</span>
+</code></pre>
+            </section>
+         </article>
+      </main>
+   </body>
+</html>
